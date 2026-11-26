@@ -18,10 +18,27 @@ export default function ToolClient({ slug }: { slug: string }) {
           pages.forEach((p) => merged.addPage(p));
         }
         const out = await merged.save();
-        const blob = new Blob([out as unknown as BlobPart], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = "merged.pdf"; a.click();
+        download(out, "merged.pdf");
+        setStatus("Done");
+      } else if (slug === "images-to-pdf") {
+        const doc = await PDFDocument.create();
+        for (const f of files) {
+          const bytes = await f.arrayBuffer();
+          const img = f.type.includes("png")
+            ? await doc.embedPng(bytes)
+            : await doc.embedJpg(bytes);
+          const page = doc.addPage([img.width, img.height]);
+          page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+        }
+        const out = await doc.save();
+        download(out, "images.pdf");
+        setStatus("Done");
+      } else if (slug === "rotate-pdf") {
+        const bytes = await files[0].arrayBuffer();
+        const doc = await PDFDocument.load(bytes);
+        doc.getPages().forEach((p) => p.setRotation({ type: "degrees", angle: 90 } as any));
+        const out = await doc.save();
+        download(out, "rotated.pdf");
         setStatus("Done");
       } else {
         setStatus("Tool not yet implemented for " + slug);
@@ -29,6 +46,13 @@ export default function ToolClient({ slug }: { slug: string }) {
     } catch (e) {
       setStatus("Error: " + (e as Error).message);
     }
+  }
+
+  function download(bytes: Uint8Array, name: string) {
+    const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name; a.click();
   }
 
   return (
