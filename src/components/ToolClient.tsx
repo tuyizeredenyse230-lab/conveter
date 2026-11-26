@@ -40,6 +40,41 @@ export default function ToolClient({ slug }: { slug: string }) {
         const out = await doc.save();
         download(out, "rotated.pdf");
         setStatus("Done");
+      } else if (slug === "compress-pdf") {
+        const bytes = await files[0].arrayBuffer();
+        const doc = await PDFDocument.load(bytes);
+        const out = await doc.save({ useObjectStreams: true });
+        download(out, "compressed.pdf");
+        setStatus("Done");
+      } else if (slug === "split-pdf") {
+        const bytes = await files[0].arrayBuffer();
+        const doc = await PDFDocument.load(bytes);
+        const newDoc = await PDFDocument.create();
+        const [p] = await newDoc.copyPages(doc, [0]);
+        newDoc.addPage(p);
+        const out = await newDoc.save();
+        download(out, "page-1.pdf");
+        setStatus("Done");
+      } else if (slug === "watermark-pdf") {
+        const bytes = await files[0].arrayBuffer();
+        const doc = await PDFDocument.load(bytes);
+        const font = await doc.embedFont("Helvetica");
+        doc.getPages().forEach((p) => {
+          p.drawText("CONFIDENTIAL", { x: 50, y: p.getHeight() / 2, size: 40, font, opacity: 0.3 });
+        });
+        const out = await doc.save();
+        download(out, "watermarked.pdf");
+        setStatus("Done");
+      } else if (slug === "page-numbers") {
+        const bytes = await files[0].arrayBuffer();
+        const doc = await PDFDocument.load(bytes);
+        const font = await doc.embedFont("Helvetica");
+        doc.getPages().forEach((p, i) => {
+          p.drawText(String(i + 1), { x: p.getWidth() / 2, y: 20, size: 12, font });
+        });
+        const out = await doc.save();
+        download(out, "numbered.pdf");
+        setStatus("Done");
       } else {
         setStatus("Tool not yet implemented for " + slug);
       }
